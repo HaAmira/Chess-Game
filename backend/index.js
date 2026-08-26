@@ -31,6 +31,22 @@ const initialBoard = [
   ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
 ];
 
+const boardChange=(board)=>{
+  const tempBoard = board.map(row => [...row]);
+  for(let i=0; i<tempBoard.length; i++){
+    for(let j=0; j<tempBoard[0].length; j++){
+      if(tempBoard[i][j]!==null && tempBoard[i][j].length===3){
+        let p=tempBoard[i][j];
+        tempBoard[i][j]=p.slice(0,2);
+      }
+      else if(tempBoard[i][j]!==null && tempBoard[i][j].length===1){
+        tempBoard[i][j]=null;
+      }
+    }
+  }
+  return tempBoard;
+}
+
 const createBoard = () => {
   return initialBoard.map((row) => [...row]);
 };
@@ -271,7 +287,7 @@ const checkOutKing=(board,i,j,a)=>{
 const generatePawnMoves=(board, i, j, color)=>{
   const moves = [];
   if(color==='b'){
-    // if(i==2){
+    console.log("validMove: white",board[i][j])
       if(i+1<8 && j+1<8 && board[i+1][j+1]!==null && board[i+1][j+1][0]!==color){
         moves.push([i+1,j+1]);
       }
@@ -284,21 +300,9 @@ const generatePawnMoves=(board, i, j, color)=>{
           moves.push([i+2,j]);
         }
       }
-    // }
-    // else{
-    //   if(i-1>=0 && j+1<8 && board[i-1][j+1]!==null && board[i-1][j+1][0]!==color){
-    //     moves.push([i-1,j+1]);
-    //   }
-    //   if(i-1>=0 && j-1>=0 && board[i-1][j-1]!==null && board[i-1][j-1][0]!==color){
-    //     moves.push([i-1,j-1]);
-    //   }
-    //   if(i-1>=0 && board[i-1][j]===null){
-    //     moves.push([i-1,j]);
-    //   }
-    // }
   }
   if(color==='w'){
-    // if(i==7){
+    console.log("validMove: white",board[i][j])
       if(i-1>=0 && j-1>=0 && board[i-1][j-1]!==null && board[i-1][j-1][0]!==color){
         moves.push([i-1,j-1]);
       }
@@ -311,18 +315,6 @@ const generatePawnMoves=(board, i, j, color)=>{
           moves.push([i-2,j]);
         }
       }
-    // }
-    // else{
-    //   if(i+1<8 && j+1<8 && board[i+1][j+1]!==null && board[i+1][j+1][0]!==color){
-    //     moves.push([i+1,j+1]);
-    //   }
-    //   if(i+1<8 && j-1>=0 && board[i+1][j-1]!==null && board[i+1][j-1][0]!==color){
-    //     moves.push([i+1,j-1]);
-    //   }
-    //   if(i+1<8 && board[i+1][j]===null){
-    //     moves.push([i+1,j]);
-    //   }
-    // }
   }
   console.log("validMoves: Pawn",moves);
   return moves;
@@ -491,6 +483,10 @@ const generateKingMoves=(board,i,j,color)=>{
 }
 
 const generateMoves = (board, i, j) => {
+  console.log("generateMoves:- -------------------");
+        for(let i=0; i<board.length; i++){
+        console.log(board[i]);
+      }
   const piece = board[i][j];
   if (!piece) return [];
   const color = piece[0];
@@ -542,15 +538,10 @@ const hasAnyLegalMove = (board, color) => {
   return false;
 }
 
-  // const isCheckOut=()=>{
-  //   j
-  // }
-
 app.get("/", (req, res) => {
   res.send("Socket Server Running");
 });
 
-// let Castling = true;
 
 const castlingAllowed=(board,f,l,ft,lt,color)=>{
   if(color==='w' && !whiteOppenet.data.Castling){
@@ -559,9 +550,7 @@ const castlingAllowed=(board,f,l,ft,lt,color)=>{
   else if(color==='b' && !blackOppenet.data.Castling){
     return false;
   }
-  // if(!whiteOppenet.data.Castling || !blackOppenet.data.Castling){
-  //   return false;
-  // }
+
   if(checkOutKing(board,f,l,color)){
     return false;
   }
@@ -579,9 +568,7 @@ const castlingAllowed=(board,f,l,ft,lt,color)=>{
       }
     }
   }
-  // if(checkOutKing(board,ft,lt,color)){
-  //   return false;
-  // }
+
   return true;
 }
 
@@ -647,18 +634,20 @@ io.on("connection", (socket) => {
 
   }
 
-  socket.on("move", ({from,to,updatePawn})=>{
+
+  socket.on("move", ({from,to,board,updatePawn})=>{
+    console.log("<<<<<------------------>>>");
+
     
     const roomId = socket.data.roomId;
-    const color = socket.data.color;
-    console.log("Move:",socket.id,from,"->",to," :: ",color,",",roomId);
+    // const color = socket.data.color;
+    console.log("Move:",socket.id,",",roomId);
     
     if(!roomId){
       console.log("You are not currently in a games");
       socket.emit("moveReply", {
         success: false,
         message: "You are not currently in a games",
-        // socket
       });
 
       return;
@@ -675,75 +664,86 @@ io.on("connection", (socket) => {
 
       return;
     }
+
+    const changeBoard = boardChange(board);
+
     
-    if(game.turn!==color){
-      console.log("Not your turn");
+    const l = from.charCodeAt(0) - 97;
+    const f = 8-Number(from[1]);
+    
+    const lt = to.charCodeAt(0) - 97;
+    const ft = 8-Number(to[1]);
+    console.log("ready for search",f,",",l," -- ",ft,",",lt);
+    
+    console.log("moveReply board and changeBoard:- ",board[f][l],",",changeBoard[f][l])
+    console.log("moveReply: board:- ",board);
+    console.log("moveReply: changeBoard:- ",changeBoard);
+
+    if (
+      f < 0 || f > 7 ||
+      l < 0 || l > 7 ||
+      ft < 0 || ft > 7 ||
+      lt < 0 || lt > 7
+    ) {
       socket.emit("moveReply", {
         success: false,
-        message: "Not your turn",
-        // socket
+        message: "Invalid board position",
       });
-
+    
       return;
     }
 
+    const piece = changeBoard[f][l];
+    const destinationPiece = changeBoard[ft][lt];
 
-    const board = games[roomId].playBoard;
+    for(let i=0; i<changeBoard.length; i++){
+      console.log(board[i]);
+    }
+
+    if(changeBoard[f][l]===null){
+      socket.emit("moveReply", {
+        success: false,
+        message: "No piece at selected position",
+        board
+      });
+      return;
+    }
+
+    let color='w';
+    if(board[f][l][0]!==color){
+      color='b';
+    }
+
+    console.log("Move color: ",socket.id,":- ",from,"->",to," :: ",game.turn,",",color,"!")
 
     
-    // let success=false;
-    // if(from.length===2 && to.length===2){
-      const l = from.charCodeAt(0) - 97;
-      const f = 8-Number(from[1]);
+    if(game.turn!==color){
+      console.log("Not your turn ",game.turn,",",color);
+      socket.emit("moveReply", {
+        success: false,
+        message: "Not your turn",
+        board
+      });
       
-      const lt = to.charCodeAt(0) - 97;
-      const ft = 8-Number(to[1]);
-      console.log("ready for search",f,",",l," -- ",ft,",",lt);
-      
-      if (
-        f < 0 || f > 7 ||
-        l < 0 || l > 7 ||
-        ft < 0 || ft > 7 ||
-        lt < 0 || lt > 7
-      ) {
-        socket.emit("moveReply", {
-          success: false,
-          message: "Invalid board position",
-        });
-      
-        return;
-      }
-
-      const piece = board[f][l];
-      const destinationPiece = board[ft][lt];
-
-      for(let i=0; i<board.length; i++){
-        console.log(board[i]);
-      }
-
-      if(board[f][l]===null){
-        socket.emit("moveReply", {
-          success: false,
-          message: "No piece at selected position",
-        });
-
-        return;
-      }
-
-      if(piece[0]!==color){
-        console.log("You cannot move opponent's piece")
-        socket.emit("moveReply", {
-          success: false,
-          message: "You cannot move opponent's piece",
-        });
-
-        return;
-      }
+      return;
+    }
+    
+    if(piece[0]!==color){
+      console.log("You cannot move opponent's piece")
+      socket.emit("moveReply", {
+        success: false,
+        message: "You cannot move opponent's piece",
+        board
+      });
+      return;
+    }
 
       if(destinationPiece!==null && destinationPiece[0]===color){
+
         socket.emit("moveReply", {
           success: false,
           message: "Your own piece is on destination",
+          board
         });
 
         return;
@@ -753,9 +753,9 @@ io.on("connection", (socket) => {
       // STEP 1: Piece ka normal movement check
       // ----------------------------------------------------
 
-      if(board[f][l][1]==='k' && Math.abs(l-lt)===2){
-        if(castlingAllowed(board,f,l,ft,lt,color)){
-          const tempBoard = board.map((row)=>[...row]);
+      if(changeBoard[f][l][1]==='k' && Math.abs(l-lt)===2){
+        if(castlingAllowed(changeBoard,f,l,ft,lt,color)){
+          const tempBoard = changeBoard.map((row)=>[...row]);
           tempBoard[ft][lt]=tempBoard[f][l];
           tempBoard[f][l]=null;
           if(l>lt){
@@ -783,12 +783,12 @@ io.on("connection", (socket) => {
           // Agar move ke baad apna King check me aa raha hai
           if (!myKingSafe) {
             socket.emit("moveReply", {
-              success: false,
+              success: false ,
               from,
               to,
               board,
               kingIsSafe: false,
-              opponentKingIssafe: false,
+              opponentKingIssafe: true,
               turn: game.turn,
               gameOver: false,
               checkmate: false,
@@ -799,15 +799,15 @@ io.on("connection", (socket) => {
             return;
           }
 
-          board[ft][lt]=board[f][l];
-          board[f][l]=null;
+          changeBoard[ft][lt]=changeBoard[f][l];
+          changeBoard[f][l]=null;
           if(l>lt){
-            board[f][l-1]=board[f][0];
-            board[f][0]=null;
+            changeBoard[f][l-1]=changeBoard[f][0];
+            changeBoard[f][0]=null;
           }
           else{
-            board[f][l+1]=board[f][7];
-            board[f][7]=null;
+            changeBoard[f][l+1]=changeBoard[f][7];
+            changeBoard[f][7]=null;
           }
           Castling=false;
 
@@ -830,7 +830,7 @@ io.on("connection", (socket) => {
       }
 
       else{
-        const moves = generateMoves(board,f,l);
+        const moves = generateMoves(changeBoard,f,l);
 
         const success = moves.some(
             ([x,y]) => x===ft && y===lt
@@ -864,7 +864,7 @@ io.on("connection", (socket) => {
         // Real board ko abhi touch nahi karna
         // ----------------------------------------------------
 
-        const tempBoard = board.map((row) => [...row]);
+        const tempBoard = changeBoard.map((row) => [...row]);
 
 
         // proposed move sirf temporary board par
@@ -934,16 +934,16 @@ io.on("connection", (socket) => {
         // Isliye REAL BOARD update karo
         // ----------------------------------------------------
 
-        board[ft][lt] = board[f][l];
-        board[f][l] = null;
-        if(board[ft][lt][1]==='p' && updatePawn){
+        changeBoard[ft][lt] = changeBoard[f][l];
+        changeBoard[f][l] = null;
+        if(changeBoard[ft][lt][1]==='p' && updatePawn){
           const validPromotionPieces = ["q","r","b","n"];
           if(((color==='w' && ft===0) || (color==='b' && ft===7)) && validPromotionPieces.includes(updatePawn)){
-            board[ft][lt] = color+updatePawn;
+            changeBoard[ft][lt] = color+updatePawn;
           }
           else{
-            board[f][l] = board[ft][lt];
-            board[ft][lt] = null;
+            changeBoard[f][l] = changeBoard[ft][lt];
+            changeBoard[ft][lt] = null;
             socket.emit("moveReply", {
               success: false,
               from,
@@ -962,14 +962,13 @@ io.on("connection", (socket) => {
           }
         }
 
-        if(board[ft][lt][1]==='k' || board[ft][lt][1]==='r'){
-          if(board[ft][lt][0]==='b'){
+        if(changeBoard[ft][lt][1]==='k' || changeBoard[ft][lt][1]==='r'){
+          if(changeBoard[ft][lt][0]==='b'){
             blackOppenet.data.Castling=false;
           }
-          if(board[ft][lt][0]==='w'){
+          if(changeBoard[ft][lt][0]==='w'){
             whiteOppenet.data.Castling=false;
           }
-          // Castling=false;
         }
       }
 
@@ -985,7 +984,7 @@ io.on("connection", (socket) => {
       // ----------------------------------------------------
 
       const opponentKingPosition = kingPosition(
-        board,
+        changeBoard,
         opponentColor
       );
 
@@ -996,12 +995,12 @@ io.on("connection", (socket) => {
           newPiece,
           board,
           kingIsSafe: true,
-          opponentKingIssafe: true,
+          opponentKingIssafe: false,
           turn: game.turn,
           gameOver: true,
           checkmate: false,
           stalemate: false,
-          message: "King not found",
+          message: "Opponent King not found",
         });
       
         return;
@@ -1012,7 +1011,7 @@ io.on("connection", (socket) => {
       if (opponentKingPosition) {
       
         const opponentKingSafe = checkOutKing(
-          board,
+          changeBoard,
           opponentKingPosition.i,
           opponentKingPosition.j,
           opponentColor
@@ -1026,7 +1025,7 @@ io.on("connection", (socket) => {
           success: true,
           from,
           to,
-          board,
+          board: changeBoard,
           kingIsSafe: true,
           opponentKingIssafe: false,
           turn: game.turn,
@@ -1048,29 +1047,18 @@ io.on("connection", (socket) => {
       let stalemate = false;
 
       if(opponentInCheck){
-        opponentHasValidMoves = hasAnyLegalMove(board,opponentColor);
+        opponentHasValidMoves = hasAnyLegalMove(changeBoard,opponentColor);
       }
       else{
-        stalemate = !hasAnyLegalMove(board,opponentColor);
+        stalemate = !hasAnyLegalMove(changeBoard,opponentColor);
       }
-
-      // if (opponentInCheck) {
-      //   checkmate = !hasAnyLegalMove(board, opponentColor);
-      // }
-      // else {
-      //   stalemate = !hasAnyLegalMove(board, opponentColor);
-      // }
-
-      // if(checkmate){
-
-      // }
 
       if(opponentInCheck && !opponentHasValidMoves){
         io.to(roomId).emit("moveReply",{
           success: true,
           from,
           to,
-          board,
+          board: changeBoard,
           kingIsSafe: true,
           opponentKingIssafe: false,
           turn: game.turn,
@@ -1087,7 +1075,7 @@ io.on("connection", (socket) => {
           success: true,
           from,
           to,
-          board,
+          board: changeBoard,
           kingIsSafe: true,
           opponentKingIssafe: false,
           turn: game.turn,
@@ -1115,7 +1103,7 @@ io.on("connection", (socket) => {
         success: true,
         from,
         to,
-        board,
+        board: changeBoard,
         kingIsSafe: true,
         opponentKingIssafe: true,
         turn: game.turn,
@@ -1126,6 +1114,220 @@ io.on("connection", (socket) => {
       });
       return ;
     // }
+
+  });
+
+
+  //-------------------------------------------------------------------------
+
+  socket.on("validMove", ({from,board})=>{
+    console.log("vaild:  <<<<<------------------>>>  :valid");
+
+    console.log("Move: validMove1",socket.id,":- ");
+    
+    const roomId = socket.data.roomId;
+    
+    if(!roomId){
+      console.log("You are not currently in a games: validMove");
+      socket.emit("vaildMoveReply", {
+        success: false,
+        message: "You are not currently in a games: validMove",
+      });
+      
+      return;
+    }
+
+    const game = games[roomId];
+
+    if(!game){
+      console.log("Game not found: validMove");
+      socket.emit("vaildMoveReply", {
+        success: false,
+        message: "Game not found: validMove",
+      });
+
+      return;
+    }
+
+    const l = from.charCodeAt(0) - 97;
+    const f = 8-Number(from[1]);
+
+    if (
+      f < 0 || f > 7 ||
+      l < 0 || l > 7
+    ) {
+      socket.emit("vaildMoveReply", {
+        success: false,
+        message: "Invalid board position: validMove",
+        board
+      });
+    
+      return;
+    }
+
+    console.log("ValidMoves ready for search",f,",",l,);
+
+    // const board = games[roomId].playBoard;
+    const changeBoard = boardChange(board);
+
+    console.log("ValidMoves board and changeBoard:- ",board[f][l],",",changeBoard[f][l])
+    console.log("ValidMoves: board:- ",board);
+    console.log("ValidMoves: changeBoard:- ",changeBoard);
+
+
+    if(changeBoard[f][l]===null){
+      socket.emit("vaildMoveReply", {
+        success: false,
+        message: "No piece at selected position: validMove",
+        board
+      });
+      return;
+    }
+
+    let color='w';
+    if(changeBoard[f][l][0]!==color){
+      color='b';
+    }
+
+    console.log("Move: validMove2 ",socket.id," | ",from,"-> :: ",color,",",roomId);
+    
+    if(game.turn!==color){
+      console.log(`Not your turn ${game.turn}, color: ${color}: validMove`);
+      socket.emit("vaildMoveReply", {
+        success: false,
+        message: `Not your turn ${game.turn}, color: ${color}: validMove`,
+        board
+        // socket
+      });
+
+      return;
+    }
+
+      const piece = changeBoard[f][l];
+
+      console.log("validMove board---------------")
+
+      for(let i=0; i<board.length; i++){
+        console.log(board[i]);
+      }
+
+      console.log("validMove changeBoard---------------")
+
+      for(let i=0; i<changeBoard.length; i++){
+        console.log(changeBoard[i]);
+      }
+
+      if(piece[0]!==color){
+        console.log("You cannot move opponent's piece: validMove")
+        socket.emit("vaildMoveReply", {
+          success: false,
+          message: "You cannot move opponent's piece: validMove",
+          board
+        });
+
+        return;
+      }
+
+      const myKingPosition = kingPosition(changeBoard, color);
+
+        if (!myKingPosition) {
+          socket.emit("vaildMoveReply", {
+            success: false,
+            from,
+            changeBoard,
+            kingIsSafe: true,
+            message: "King not found: validMove",
+          });
+        
+          return;
+        }
+
+
+        // ----------------------------------------------------
+        // STEP 5: Check karo ki apna King safe hai ya nahi
+        // ----------------------------------------------------
+
+        const myKingSafe = checkOutKing(
+          changeBoard,
+          myKingPosition.i,
+          myKingPosition.j,
+          color
+        );
+
+        if (!myKingSafe) {
+          socket.emit("vaildMoveReply", {
+            success: false,
+            from,
+            board,
+            kingIsSafe: false,
+            message: "You cannot make this move. Your King would be in check: validMove.",
+          });
+        
+          return;
+        }
+
+      const tempBoard = changeBoard.map(row=>[...row])
+      tempBoard[f][l]=null;
+      
+      const myKingSafeMove = checkOutKing(
+          tempBoard,
+          myKingPosition.i,
+          myKingPosition.j,
+          color
+        );
+
+        if (!myKingSafeMove) {
+          socket.emit("vaildMoveReply", {
+            success: false,
+            from,
+            board,
+            kingIsSafe: false,
+            message: "You cannot make this move. Your King would be in check: validMove.",
+          });
+        
+          return;
+        }
+
+        const pieceValidMove = changeBoard.map(row=>[...row])
+
+        const ValidMoves = generateMoves(pieceValidMove, f, l);
+
+        console.log("---No change pieceValidMove = board.map: validMove-------");
+            
+        for(let i=0; i<pieceValidMove.length; i++){
+          console.log(pieceValidMove[i]);
+        }
+
+
+
+        console.log("---ValidMoves = generateMoves: validMove-------",ValidMoves.length);
+          
+        for(let i=0; i<ValidMoves.length; i++){
+          console.log(ValidMoves[i][0],",",ValidMoves[i][1]);
+          const p=pieceValidMove[ValidMoves[i][0]][ValidMoves[i][1]];
+          if(p===null){
+            pieceValidMove[ValidMoves[i][0]][ValidMoves[i][1]] = 'm';
+          }
+          else{
+            pieceValidMove[ValidMoves[i][0]][ValidMoves[i][1]] = p+'m';
+          }
+        }
+
+        console.log("---pieceValidMove = board.map: validMove-------");
+            
+      for(let i=0; i<pieceValidMove.length; i++){
+        console.log(pieceValidMove[i]);
+      }
+
+        socket.emit("vaildMoveReply", {
+            success: true,
+            from,
+            board: changeBoard,
+            pieceValidMove,
+            kingIsSafe: true,
+            message: "You cannot make this move. Your King would be in check: validMove.",
+        });
+      
 
   });
 
