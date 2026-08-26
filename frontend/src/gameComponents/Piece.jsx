@@ -28,7 +28,7 @@ const Piece = ({piece}) => {
         fontSize: "42px",
         userSelect: "none",
       }}
-      className='text-center cursor-pointer'
+      className='text-center cursor-pointer relative z-1'
     >
       {pieces[piece]}
     </Typography>
