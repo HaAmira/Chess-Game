@@ -53,6 +53,8 @@ const createBoard = () => {
 
 let games = {};
 let waitingPlayer=null;
+let whiteOppenet;
+let blackOppenet;
 let roomCounter = 1;
 
 const kingPosition=(board,a)=>{
@@ -538,6 +540,24 @@ const hasAnyLegalMove = (board, color) => {
   return false;
 }
 
+const moveToSaveKing = (board,ValidMoves,f,l,i,j,color)=>{
+  const updateValidMove=[];
+  for(let a=0; a<ValidMoves.length; a++){
+    const tempBoard = board.map(row => [...row]);
+    const [x,y]=ValidMoves[a];
+    tempBoard[x][y]=tempBoard[f][l];
+    tempBoard[f][l]=null;
+    const isKingSafe = checkOutKing(tempBoard,i,j,color);
+    if(isKingSafe){
+      updateValidMove.push(ValidMoves[a]);
+    }
+  }
+  return updateValidMove;
+}
+
+
+
+
 app.get("/", (req, res) => {
   res.send("Socket Server Running");
 });
@@ -584,8 +604,8 @@ io.on("connection", (socket) => {
     })
   }
   else{
-    let whiteOppenet = waitingPlayer;
-    let blackOppenet = socket;
+    whiteOppenet = waitingPlayer;
+    blackOppenet = socket;
 
     let roomId = `room-${roomCounter++}`;
 
@@ -636,7 +656,7 @@ io.on("connection", (socket) => {
 
 
   socket.on("move", ({from,to,board,updatePawn})=>{
-    console.log("<<<<<------------------>>>");
+    console.log("<<<<<------------------>>>",":- ",whiteOppenet,",",blackOppenet);
 
     
     const roomId = socket.data.roomId;
@@ -1242,10 +1262,9 @@ io.on("connection", (socket) => {
           return;
         }
 
+        const pieceValidMove = changeBoard.map(row=>[...row])
 
-        // ----------------------------------------------------
-        // STEP 5: Check karo ki apna King safe hai ya nahi
-        // ----------------------------------------------------
+        let ValidMoves = generateMoves(pieceValidMove, f, l);
 
         const myKingSafe = checkOutKing(
           changeBoard,
@@ -1254,43 +1273,69 @@ io.on("connection", (socket) => {
           color
         );
 
-        if (!myKingSafe) {
-          socket.emit("vaildMoveReply", {
-            success: false,
-            from,
-            board,
-            kingIsSafe: false,
-            message: "You cannot make this move. Your King would be in check: validMove.",
-          });
-        
-          return;
+        if(!myKingSafe){
+          ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,myKingPosition.i,myKingPosition.j,color);
+          if(ValidMoves.length===0){
+            socket.emit("vaildMoveReply", {
+              success: false,
+              from,
+              board,
+              kingIsSafe: false,
+              message: "You cannot make this move. Your King would be in check: validMove.",
+            });
+            return;
+          }
         }
 
-      const tempBoard = changeBoard.map(row=>[...row])
-      tempBoard[f][l]=null;
+
+        // ----------------------------------------------------
+        // STEP 5: Check karo ki apna King safe hai ya nahi
+        // ----------------------------------------------------
+
+      //   const myKingSafe = checkOutKing(
+      //     changeBoard,
+      //     myKingPosition.i,
+      //     myKingPosition.j,
+      //     color
+      //   );
+
+      //   if (!myKingSafe) {
+      //     socket.emit("vaildMoveReply", {
+      //       success: false,
+      //       from,
+      //       board,
+      //       kingIsSafe: false,
+      //       message: "You cannot make this move. Your King would be in check: validMove.",
+      //     });
+        
+      //     return;
+      //   }
+
+      // const tempBoard = changeBoard.map(row=>[...row])
+      // tempBoard[f][l]=null;
       
-      const myKingSafeMove = checkOutKing(
-          tempBoard,
-          myKingPosition.i,
-          myKingPosition.j,
-          color
-        );
+      // const myKingSafeMove = checkOutKing(
+      //     tempBoard,
+      //     myKingPosition.i,
+      //     myKingPosition.j,
+      //     color
+      //   );
 
-        if (!myKingSafeMove) {
-          socket.emit("vaildMoveReply", {
-            success: false,
-            from,
-            board,
-            kingIsSafe: false,
-            message: "You cannot make this move. Your King would be in check: validMove.",
-          });
+      //   if (!myKingSafeMove) {
+      //     socket.emit("vaildMoveReply", {
+      //       success: false,
+      //       from,
+      //       board,
+      //       kingIsSafe: false,
+      //       message: "You cannot make this move. Your King would be in check: validMove.",
+      //     });
         
-          return;
-        }
+      //     return;
+      //   }
 
-        const pieceValidMove = changeBoard.map(row=>[...row])
+        // const pieceValidMove = changeBoard.map(row=>[...row])
 
-        const ValidMoves = generateMoves(pieceValidMove, f, l);
+        // const ValidMoves = generateMoves(pieceValidMove, f, l);
 
         console.log("---No change pieceValidMove = board.map: validMove-------");
             

@@ -26,11 +26,12 @@
 import { useEffect, useState } from "react";
 import { socket } from '../utils/socket'
 import Square from "../gameComponents/Square";
+const initialBoard = [ ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"], ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"], [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null], ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"], ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"], ];
 
 
 function Socket_con() {
 
-    // const [validMove,setValidMove] = useState({});
+    // // const [validMove,setValidMove] = useState({});
     const [board,setBoard] = useState([
       ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
       ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
@@ -42,126 +43,140 @@ function Socket_con() {
       ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
     ]);
 
+    // sonst
+
     const [from,setFrom] = useState("");
     const [to,setTo] = useState("");
-    console.log("fromLocation:- ",from,",",to);
 
+    useEffect(() => { 
+        const handleConnect = () => { 
+            console.log("✅ Connected to server"); 
+            console.log("Socket ID:", socket.id); 
+        }; 
+        const handleDisconnect = (reason) => { 
+            console.log("❌ Disconnected:", reason); 
+        }; 
+        socket.on("connect", handleConnect); 
+        socket.on("disconnect", handleDisconnect); // If socket is already connected when component mounts 
+        if (socket.connected) { 
+            console.log("✅ Socket already connected"); 
+            console.log("Socket ID:", socket.id); 
+        } 
+        
+        return () => { 
+            socket.off("connect", handleConnect); 
+            socket.off("disconnect", handleDisconnect); 
+        }; 
+    }, []);
+
+
+
+    // const [from,setFrom] = useState("");
+    // const [to,setTo] = useState("");
+    console.log("fromLocation:- ",from,",",to);
+    
     const handleClickPlace = (col,row) =>{
         if(col>7 || col<0 || row>7 || row<0){
             console.log(" wrong Selection: fornt end side");
             alert("wrong Selection");
+            return;
         }
-        let a=String.fromCharCode('a'.charCodeAt(0) + col);
-        let b=8-row;
-        let pos = a+b;
-        // const pieceColor = board[row][col][0];
-        // if(!from){
-            setFrom(pos);
-        // }
-        // let fromRow = from.charCodeAt(0) - 97;
-        // let fromCol = 8-Number(from[1]);
-        // let fromPieceColor = board[fromRow][fromCol];
-        // if(from && (board[row][col]===null || pieceColor!==fromPieceColor)){
-        //     setTo(pos);
-        // }
-        // else if(from && pieceColor===fromPieceColor){
-        //     setFrom(pos);
-        // }
-        // setFrom(pos);
-        console.log("handleClickPlace:- ",col,",",row," | ",a,",",b,":- ",pos);
+
+        const file = String.fromCharCode(97 + col); 
+        const rank = 8 - row;
+        const position = `${file}${rank}`;
+        const clickedPiece = board[row][col];
+        console.log( "Clicked:", position, "Piece:", clickedPiece );
+
+        if(!from){
+            if(!clickedPiece){
+                console.log("❌ Please select a piece"); 
+                return;
+            }
+            setFrom(position); 
+            setTo("");
+            console.log("🟢 From:", position); 
+            return;
+        }
+        else if(from){
+            const fromCol = from.charCodeAt(0) - 97;
+            const fromRow = 8-Number(from[1]);
+            const fromPiece = board[fromRow][fromCol];
+
+            const fromPieceColor = fromPiece[0];
+
+            console.log("from:- ",clickedPiece," | ",from,",",fromRow,",",fromCol,":- ",board[fromRow][fromCol],",",fromPieceColor);
+
+            if(clickedPiece && clickedPiece[0]===fromPieceColor){
+                setFrom(position);
+                setTo("");
+                console.log("🔄 New From:", position); 
+                return;
+            }
+            else{
+                setTo(position);
+            }
+            console.log("🟡 From:", from); 
+            console.log("🟡 To:", position);
+        }
     }
 
     useEffect(() => {
-        console.log("In UseEffect")
-        socket.on("connect", () => {
-            console.log(socket.id);
-            console.log(socket.data);
+        console.log("In UseEffect:- ",from,",",to);
+
+        if (!from || !to) return;
+
+        const handleMoveReply = ({ success, message, board }) => {
+            if (success) {
+                console.log(`✅ Valid Move: ${message}`);
+                setFrom("");
+                setTo("");
+            } else {
+                console.log(`❌ Invalid Move: ${message}`);
+                setTo("");
+            }
+            console.log("handleMoveReply Board: ",board);
+            setBoard(board);
+        };
+        socket.on("moveReply",handleMoveReply);
+        socket.emit("move", {
+            from,
+            to,
+            board
         });
-        // console.log("socketData:- ",socket.data);
-
-        // socket.emit("move", {
-        //     from: 'g2',
-        //     to: 'g3',
-        //     board
-        // });
-        // const handleMoveReply = ({ success, message, board }) => {
-        //     if (success) {
-        //         console.log(`✅ Valid Move: ${message}`);
-        //         setFrom("");
-        //     } else {
-        //         console.log(`❌ Invalid Move: ${message}`);
-        //     }
-        //     console.log("handleMoveReply Board: ",board);
-        //     setBoard(board);
-        // };
-        // socket.on("moveReply",handleMoveReply);
-
-        // socket.emit("move", {
-        //     from: 'g2',
-        //     to: 'c6',
-        //     board
-        // });
-        // const handleMoveReply = ({ success, message, board }) => {
-        //     if (success) {
-        //         setFrom("");
-        //       console.log(`✅ Valid Move: ${message}`);
-        //     } else {
-        //         console.log(`❌ Invalid Move: ${message}`);
-        //     }
-        //     console.log("handleMoveReply Board: ",board);
-        //     setBoard(board);
-        // };
-        // socket.on("moveReply",handleMoveReply);
-
-        // socket.emit("move", {
-        //     from: 'b7',
-        //     to: 'c6',
-        //     board
-        // });
-        // const handleMoveReply = ({ success, message, board }) => {
-        //     if (success) {
-        //         setFrom("");
-        //       console.log(`✅ Valid Move: ${message}`);
-        //     } else {
-        //         console.log(`❌ Invalid Move: ${message}`);
-        //     }
-        //     console.log("handleMoveReply Board: ",board);
-        //     setBoard(board);
-        // };
-        // socket.on("moveReply",handleMoveReply);
 
         return () => {
-            socket.off("connect");
-            // socket.off("moveReply",handleMoveReply);
-            // socket.off("vaildMoveReply",handlerValidMove);
+            socket.off("moveReply",handleMoveReply);
         };
-    }, [socket]);
+    }, [to]);
 
     useEffect(()=>{
-            console.log(from,",");          
-            const handlerValidMove = ({ success, message, pieceValidMove }) => {
-                if(success){
-                    console.log(`✅ Valid Move ${from}: ${message}`)
-                    console.log("handlerValidMove:- ",pieceValidMove);
+        console.log(from,",");  
+        if(!from) return;        
+        const handlerValidMove = ({ success, message, pieceValidMove }) => {
+            if(success){
+                console.log(`✅ Valid Move ${from}: ${message}`)
+                console.log("handlerValidMove:- ",pieceValidMove);
+                if(pieceValidMove){
                     setBoard(pieceValidMove);
                 }
-                else{
-                    console.log(`❌ Invalid Move: ${message}`);
-                }
             }
-            if(from){
-                socket.emit("validMove",{
-                    from: from,
-                    board:  board
-                });
-
-                socket.on("vaildMoveReply",handlerValidMove);
+            else{
+                console.log(`❌ Invalid Move: ${message}`);
+                setFrom("");
+                setTo("");
             }
-            return () => {
-                // socket.off("connect");
-                // socket.off("moveReply",handleMoveReply);
-                socket.off("vaildMoveReply",handlerValidMove);
-            };
+        }
+        // if(from){
+            socket.emit("validMove",{
+                from,
+                board
+            });
+            socket.on("vaildMoveReply",handlerValidMove);
+        // }
+        return () => {
+            socket.off("vaildMoveReply",handlerValidMove);
+        };
         // }
     },[from]);
 
