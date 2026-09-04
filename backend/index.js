@@ -287,6 +287,7 @@ const checkOutKing=(board,i,j,a)=>{
 }
 
 const generatePawnMoves=(board, i, j, color)=>{
+  console.log("generatePawnMoves:- ",i,",",j,":- ",board[i][j]);
   const moves = [];
   if(color==='b'){
     console.log("validMove: white",board[i][j])
@@ -323,6 +324,7 @@ const generatePawnMoves=(board, i, j, color)=>{
 }
 
 const generateRookMoves=(board,i,j,color)=>{
+  console.log("generateRookMoves:- ",i,",",j,":- ",board[i][j]);
   const moves = [];
 
   //Down Move
@@ -384,6 +386,7 @@ const generateRookMoves=(board,i,j,color)=>{
 }
 
 const generateBishopMoves = (board,i,j,color)=>{
+  console.log("generateBishopMoves:- ",i,",",j,":- ",board[i][j]);
   const moves =  [];
 
   const steps=(x,y)=>{
@@ -432,6 +435,7 @@ const generateBishopMoves = (board,i,j,color)=>{
 }
 
 const generateKnightMoves=(board,i,j,color)=>{
+  console.log("generateKnightMoves:- ",i,",",j,":- ",board[i][j]);
   const moves = [];
   const knightMoves = [
     [i + 2, j + 1],
@@ -456,12 +460,14 @@ const generateKnightMoves=(board,i,j,color)=>{
 }
 
 const generateQueenMoves=(board,i,j,color)=>{
+  console.log("generateQueenMoves:- ",i,",",j,":- ",board[i][j]);
   const rookMoves = generateRookMoves(board,i,j,color);
   const bishopMoves = generateBishopMoves(board,i,j,color);
   return [...rookMoves,...bishopMoves];
 }
 
 const generateKingMoves=(board,i,j,color)=>{
+  console.log("generateKingMoves:- ",i,",",j,":- ",board[i][j]);
   const moves = [];
   const kingMoves = [
     [i+1,j],
@@ -485,7 +491,7 @@ const generateKingMoves=(board,i,j,color)=>{
 }
 
 const generateMoves = (board, i, j) => {
-  console.log("generateMoves:- -------------------");
+  console.log("generateMoves:- -------------------",i,",",j,":- ",board[i][j]);
         for(let i=0; i<board.length; i++){
         console.log(board[i]);
       }
@@ -527,11 +533,13 @@ const hasAnyLegalMove = (board, color) => {
           const moves = generateMoves(board, i, j);
           for (const [x, y] of moves) {
               const tempBoard = board.map(row => [...row]);
+              console.log("Checking move for piece:",piece,"from",i,j,"to",x,y);
               tempBoard[x][y] = tempBoard[i][j];
               tempBoard[i][j] = null;
               const king = kingPosition(tempBoard, color);
               if (!king) continue;
               if (checkOutKing(tempBoard, king.i, king.j, color)) {
+                console.log("Legal move found for piece:",piece,"from",i,j,"to",x,y);
                   return true;
               }
           }
@@ -540,17 +548,26 @@ const hasAnyLegalMove = (board, color) => {
   return false;
 }
 
-const moveToSaveKing = (board,ValidMoves,f,l,i,j,color)=>{
+const moveToSaveKing = (board,ValidMoves,f,l,color)=>{
+  console.log("validMove: your king is in check:- ",f,",",l,",",color,",",board[f][l]);
   const updateValidMove=[];
   for(let a=0; a<ValidMoves.length; a++){
     const tempBoard = board.map(row => [...row]);
     const [x,y]=ValidMoves[a];
+    console.log("moveToSaveKing validMoves Position:- ",a,"from",f,l,"to",x,y,":- ",tempBoard[x][y],",",tempBoard[f][l]);
     tempBoard[x][y]=tempBoard[f][l];
     tempBoard[f][l]=null;
-    const isKingSafe = checkOutKing(tempBoard,i,j,color);
-    if(isKingSafe){
-      updateValidMove.push(ValidMoves[a]);
+    const king = kingPosition(tempBoard, color);
+    if (!king) continue;
+    if (checkOutKing(tempBoard, king.i, king.j, color)) {
+      console.log("Legal move found for piece: valid move",tempBoard[x][y],",",tempBoard[f][l],", from:- ",f,",",l,"to:- ",x,",",y);
+        // return true;
+        updateValidMove.push(ValidMoves[a]);
     }
+    // const isKingSafe = checkOutKing(tempBoard,i,j,color);
+    // if(isKingSafe){
+    //   updateValidMove.push(ValidMoves[a]);
+    // }
   }
   return updateValidMove;
 }
@@ -571,7 +588,7 @@ const castlingAllowed=(board,f,l,ft,lt,color)=>{
     return false;
   }
 
-  if(checkOutKing(board,f,l,color)){
+  if(!checkOutKing(board,f,l,color)){
     return false;
   }
   if(lt<l){
@@ -595,6 +612,9 @@ const castlingAllowed=(board,f,l,ft,lt,color)=>{
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
 
+  console.log("Socket ID:", socket.id);
+  console.log("Waiting Player:", waitingPlayer ? waitingPlayer.id : null);
+
   if(waitingPlayer===null){
     waitingPlayer=socket;
     console.log(`Waiting Player: ${socket.id}`);
@@ -615,6 +635,18 @@ io.on("connection", (socket) => {
     whiteOppenet.data.color = 'w';
     blackOppenet.data.color = 'b';
 
+    console.log("========== ROOM CREATED ==========");
+    console.log("Room ID:", roomId);
+    console.log("White Socket:", whiteOppenet.id);
+    console.log("Black Socket:", blackOppenet.id);
+
+    console.log(
+        "Sockets in room:",
+        io.sockets.adapter.rooms.get(roomId)
+    );
+
+    console.log("==================================");
+
     whiteOppenet.data.roomId = roomId;
     blackOppenet.data.roomId = roomId;
 
@@ -628,6 +660,19 @@ io.on("connection", (socket) => {
       blackPlayer: blackOppenet.id,
     }
 
+      whiteOppenet.emit("gameStart", {
+        roomId,
+        color: 'w',
+        board: games[roomId].playBoard,
+        turn: games[roomId].turn
+      });
+      blackOppenet.emit("gameStart", {
+        roomId,
+        color: 'b',
+        board: games[roomId].playBoard,
+        turn: games[roomId].turn
+      });
+
     console.log("Game Created:", roomId);
 
     console.log(
@@ -637,31 +682,31 @@ io.on("connection", (socket) => {
       blackOppenet.id
     );
 
-    whiteOppenet.emit("gameStart",{
-      roomId,
-      color: 'w',
-      board: games[roomId].playBoard,
-      turn: games[roomId].turn
-    })
-    blackOppenet.emit("gameStart",{
-      roomId,
-      color: 'b',
-      board: games[roomId].playBoard,
-      turn: games[roomId].turn
-    })
-
     waitingPlayer=null;
 
   }
 
 
-  socket.on("move", ({from,to,board,updatePawn})=>{
-    console.log("<<<<<------------------>>>",":- ",whiteOppenet,",",blackOppenet);
+  // socket.on("move", ({from,to,board,updatePawn})=>{
+  socket.on("move", ({from,to,updatePawn})=>{
+    console.log("<<<<<------------------>>>",":- ");
 
     
     const roomId = socket.data.roomId;
-    // const color = socket.data.color;
+    const color = socket.data.color;
     console.log("Move:",socket.id,",",roomId);
+
+    console.log("================================");
+    console.log("MOVE RECEIVED");
+    console.log("Moving Socket:", socket.id);
+    console.log("Room ID:", roomId);
+
+    console.log(
+        "Players in this room:",
+        io.sockets.adapter.rooms.get(roomId)
+    );
+
+    console.log("================================");
     
     if(!roomId){
       console.log("You are not currently in a games");
@@ -684,6 +729,8 @@ io.on("connection", (socket) => {
 
       return;
     }
+
+    const board = game.playBoard;
 
     const changeBoard = boardChange(board);
 
@@ -727,11 +774,6 @@ io.on("connection", (socket) => {
         board
       });
       return;
-    }
-
-    let color='w';
-    if(board[f][l][0]!==color){
-      color='b';
     }
 
     console.log("Move color: ",socket.id,":- ",from,"->",to," :: ",game.turn,",",color,"!")
@@ -829,7 +871,14 @@ io.on("connection", (socket) => {
             changeBoard[f][l+1]=changeBoard[f][7];
             changeBoard[f][7]=null;
           }
-          Castling=false;
+
+          if(changeBoard[ft][lt][0]==='b'){
+            blackOppenet.data.Castling=false;
+          }
+          else if(changeBoard[ft][lt][0]==='w'){
+            whiteOppenet.data.Castling=false;
+          }
+          // Castling=false;
 
         }
         else{
@@ -992,6 +1041,8 @@ io.on("connection", (socket) => {
         }
       }
 
+      game.playBoard = changeBoard;
+
       // ----------------------------------------------------
       // STEP 7: Opponent color nikalo
       // ----------------------------------------------------
@@ -1011,8 +1062,10 @@ io.on("connection", (socket) => {
       if (!opponentKingPosition) {
         socket.emit("moveReply", {
           success: false,
-          position,
-          newPiece,
+          from,
+          to,
+          // position,
+          // newPiece,
           board,
           kingIsSafe: true,
           opponentKingIssafe: false,
@@ -1052,7 +1105,7 @@ io.on("connection", (socket) => {
           checkmate: true,
           gameOver: true,
           stalemate: false,
-          message: "Checkmate! you won the game"
+          message: "✅ Game Over! You win! Opponent King not found"
         })
         return ;
       }
@@ -1073,7 +1126,10 @@ io.on("connection", (socket) => {
         stalemate = !hasAnyLegalMove(changeBoard,opponentColor);
       }
 
+      console.log("Opponent is in check:- ",opponentInCheck," , Opponent has any valid move:- ",opponentHasValidMoves," , is in stalment:- ", stalemate);
+      
       if(opponentInCheck && !opponentHasValidMoves){
+        console.log("Reply Game Over with checkmate Opponent is in check:- ",opponentInCheck," , Opponent has any valid move:- ",opponentHasValidMoves," , is in stalment:- ", stalemate);
         io.to(roomId).emit("moveReply",{
           success: true,
           from,
@@ -1085,12 +1141,13 @@ io.on("connection", (socket) => {
           checkmate: true,
           gameOver: true,
           stalemate: false,
-          message: "Checkmate! you won the game"
+          message: `✅ Game Over! ${game.turn === 'w' ? 'White' : 'Black'} wins!`
         })
         return ;
       }
 
       if(stalemate){
+        console.log("Reply Game with stalemate Opponent is in check:- ",opponentInCheck," , Opponent has any valid move:- ",opponentHasValidMoves," , is in stalment:- ", stalemate);
         io.to(roomId).emit("moveReply",{
           success: true,
           from,
@@ -1119,11 +1176,21 @@ io.on("connection", (socket) => {
       // STEP 11: Dono players ko result bhejo
       // ----------------------------------------------------
 
+      console.log("📤 BROADCASTING MOVE");
+      console.log("Room:", roomId);
+      console.log(
+          "Room members:",
+          io.sockets.adapter.rooms.get(roomId)
+      );
+      console.log("From:", from);
+      console.log("To:", to);
+      console.log("Board:", game.playBoard);
+
       io.to(roomId).emit("moveReply", {
         success: true,
         from,
         to,
-        board: changeBoard,
+        board: game.playBoard,
         kingIsSafe: true,
         opponentKingIssafe: true,
         turn: game.turn,
@@ -1140,12 +1207,13 @@ io.on("connection", (socket) => {
 
   //-------------------------------------------------------------------------
 
-  socket.on("validMove", ({from,board})=>{
+  socket.on("validMove", ({from})=>{
     console.log("vaild:  <<<<<------------------>>>  :valid");
 
     console.log("Move: validMove1",socket.id,":- ");
     
     const roomId = socket.data.roomId;
+    const color = socket.data.color;
     
     if(!roomId){
       console.log("You are not currently in a games: validMove");
@@ -1168,6 +1236,8 @@ io.on("connection", (socket) => {
 
       return;
     }
+
+    const board = game.playBoard;
 
     const l = from.charCodeAt(0) - 97;
     const f = 8-Number(from[1]);
@@ -1204,10 +1274,6 @@ io.on("connection", (socket) => {
       return;
     }
 
-    let color='w';
-    if(changeBoard[f][l][0]!==color){
-      color='b';
-    }
 
     console.log("Move: validMove2 ",socket.id," | ",from,"-> :: ",color,",",roomId);
     
@@ -1274,7 +1340,8 @@ io.on("connection", (socket) => {
         );
 
         if(!myKingSafe){
-          ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,myKingPosition.i,myKingPosition.j,color);
+          console.log("validMove: Your King is in check, so you can only make moves that save king: validMove");
+          ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,color);
           if(ValidMoves.length===0){
             socket.emit("vaildMoveReply", {
               success: false,
@@ -1370,7 +1437,7 @@ io.on("connection", (socket) => {
             board: changeBoard,
             pieceValidMove,
             kingIsSafe: true,
-            message: "You cannot make this move. Your King would be in check: validMove.",
+            message: `You can successfully make this move ${from}: validMove.`,
         });
       
 
