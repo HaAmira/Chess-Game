@@ -56,6 +56,7 @@ let waitingPlayer=null;
 let whiteOppenet;
 let blackOppenet;
 let roomCounter = 1;
+let enPassantTarget = null;
 
 const kingPosition=(board,a)=>{
   let name = `${a}k`
@@ -303,6 +304,9 @@ const generatePawnMoves=(board, i, j, color)=>{
           moves.push([i+2,j]);
         }
       }
+      if(enPassantTarget && enPassantTarget.color!==color && enPassantTarget.row===i && Math.abs(enPassantTarget.col-j)===1){
+        moves.push([i+1,enPassantTarget.col]);
+      }
   }
   if(color==='w'){
     console.log("validMove: white",board[i][j])
@@ -317,6 +321,9 @@ const generatePawnMoves=(board, i, j, color)=>{
         if(i==6 && board[i-2][j]===null){
           moves.push([i-2,j]);
         }
+      }
+      if(enPassantTarget && enPassantTarget.color!==color && enPassantTarget.row===i && Math.abs(enPassantTarget.col-j)===1){
+        moves.push([i-1,enPassantTarget.col]);
       }
   }
   console.log("validMoves: Pawn",moves);
@@ -632,6 +639,10 @@ io.on("connection", (socket) => {
     whiteOppenet.join(roomId);
     blackOppenet.join(roomId);
 
+    // const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+    // console.log("Room member count:- ",count);
+    // io.to(roomId).emit('room_count', count);
+
     whiteOppenet.data.color = 'w';
     blackOppenet.data.color = 'b';
 
@@ -899,6 +910,7 @@ io.on("connection", (socket) => {
       }
 
       else{
+        console.log("Not Castling Moves")
         const moves = generateMoves(changeBoard,f,l);
 
         const success = moves.some(
@@ -1003,6 +1015,11 @@ io.on("connection", (socket) => {
         // Isliye REAL BOARD update karo
         // ----------------------------------------------------
 
+        //Check En Passant and perform
+        console.log("En passant Target:- ",enPassantTarget,",",changeBoard[f][l],",",changeBoard[ft][lt]);
+        if(Math.abs(f-ft)===1 && Math.abs(l-lt)===1 && changeBoard[f][l][1]==='p' && changeBoard[ft][lt]===null && enPassantTarget && changeBoard[f][l][0]!==enPassantTarget.color && enPassantTarget.row===f && enPassantTarget.col===lt){
+          changeBoard[enPassantTarget.row][enPassantTarget.col]=null;
+        }
         changeBoard[ft][lt] = changeBoard[f][l];
         changeBoard[f][l] = null;
         if(changeBoard[ft][lt][1]==='p' && updatePawn){
@@ -1186,6 +1203,14 @@ io.on("connection", (socket) => {
       console.log("To:", to);
       console.log("Board:", game.playBoard);
 
+      if(Math.abs(ft-f)===2 && l===lt && changeBoard[ft][lt][1]==='p'){
+        enPassantTarget = { row: ft, col: lt, color: changeBoard[ft][lt][0] };
+      }
+      else{
+        enPassantTarget = null;
+      }
+
+
       io.to(roomId).emit("moveReply", {
         success: true,
         from,
@@ -1331,17 +1356,19 @@ io.on("connection", (socket) => {
         const pieceValidMove = changeBoard.map(row=>[...row])
 
         let ValidMoves = generateMoves(pieceValidMove, f, l);
+        console.log("Valid Moves Generated:- ",ValidMoves);
+        ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,color);
+        console.log("validMove: Your King is in check, so you can only make moves that save king: validMove:- ",ValidMoves.length);
 
-        const myKingSafe = checkOutKing(
-          changeBoard,
-          myKingPosition.i,
-          myKingPosition.j,
-          color
-        );
+        // const myKingSafe = checkOutKing(
+        //   changeBoard,
+        //   myKingPosition.i,
+        //   myKingPosition.j,
+        //   color
+        // );
 
-        if(!myKingSafe){
-          console.log("validMove: Your King is in check, so you can only make moves that save king: validMove");
-          ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,color);
+        // if(!myKingSafe){
+          // ValidMoves = moveToSaveKing(changeBoard,ValidMoves,f,l,color);
           if(ValidMoves.length===0){
             socket.emit("vaildMoveReply", {
               success: false,
@@ -1352,7 +1379,7 @@ io.on("connection", (socket) => {
             });
             return;
           }
-        }
+        // }
 
 
         // ----------------------------------------------------
