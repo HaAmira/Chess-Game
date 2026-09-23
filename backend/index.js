@@ -53,8 +53,8 @@ const createBoard = () => {
 
 let games = {};
 let waitingPlayer=null;
-let whiteOppenet;
-let blackOppenet;
+// let whiteOppenet;
+// let blackOppenet;
 let roomCounter = 1;
 let enPassantTarget = null;
 
@@ -617,85 +617,255 @@ const castlingAllowed=(board,f,l,ft,lt,color)=>{
 }
 
 io.on("connection", (socket) => {
-  console.log("User Connected:", socket.id);
+  // console.log("User Connected:", socket.id);
 
-  console.log("Socket ID:", socket.id);
-  console.log("Waiting Player:", waitingPlayer ? waitingPlayer.id : null);
+  // console.log("Socket ID:", socket.id);
+  // console.log("Waiting Player:", waitingPlayer ? waitingPlayer.id : null);
 
-  if(waitingPlayer===null){
-    waitingPlayer=socket;
-    console.log(`Waiting Player: ${socket.id}`);
+  // if(waitingPlayer===null){
+  //   waitingPlayer=socket;
+  //   console.log(`Waiting Player: ${socket.id}`);
 
-    socket.emit("waiting",{
-      message: "Waiting for oppenent..."
-    })
-  }
-  else{
-    whiteOppenet = waitingPlayer;
-    blackOppenet = socket;
+  //   socket.emit("waiting",{
+  //     message: "Waiting for oppenent..."
+  //   })
+  // }
+  // else{
+  //   whiteOppenet = waitingPlayer;
+  //   blackOppenet = socket;
 
-    let roomId = `room-${roomCounter++}`;
+  //   let roomId = `room-${roomCounter++}`;
 
-    whiteOppenet.join(roomId);
-    blackOppenet.join(roomId);
+  //   whiteOppenet.join(roomId);
+  //   blackOppenet.join(roomId);
 
-    // const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
-    // console.log("Room member count:- ",count);
-    // io.to(roomId).emit('room_count', count);
+  //   // const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+  //   // console.log("Room member count:- ",count);
+  //   // io.to(roomId).emit('room_count', count);
 
-    whiteOppenet.data.color = 'w';
-    blackOppenet.data.color = 'b';
+  //   whiteOppenet.data.color = 'w';
+  //   blackOppenet.data.color = 'b';
 
-    console.log("========== ROOM CREATED ==========");
-    console.log("Room ID:", roomId);
-    console.log("White Socket:", whiteOppenet.id);
-    console.log("Black Socket:", blackOppenet.id);
+  //   console.log("========== ROOM CREATED ==========");
+  //   console.log("Room ID:", roomId);
+  //   console.log("White Socket:", whiteOppenet.id);
+  //   console.log("Black Socket:", blackOppenet.id);
 
-    console.log(
-        "Sockets in room:",
-        io.sockets.adapter.rooms.get(roomId)
-    );
+  //   console.log(
+  //       "Sockets in room:",
+  //       io.sockets.adapter.rooms.get(roomId)
+  //   );
 
-    console.log("==================================");
+  //   console.log("==================================");
 
-    whiteOppenet.data.roomId = roomId;
-    blackOppenet.data.roomId = roomId;
+  //   whiteOppenet.data.roomId = roomId;
+  //   blackOppenet.data.roomId = roomId;
 
-    whiteOppenet.data.Castling=true;
-    blackOppenet.data.Castling=true;
+  //   whiteOppenet.data.Castling=true;
+  //   blackOppenet.data.Castling=true;
 
-    games[roomId]={
-      playBoard: createBoard(),
-      turn: 'w',
-      whitePlayer: whiteOppenet.id,
-      blackPlayer: blackOppenet.id,
-    }
+  //   games[roomId]={
+  //     playBoard: createBoard(),
+  //     turn: 'w',
+  //     whitePlayer: whiteOppenet.id,
+  //     blackPlayer: blackOppenet.id,
+  //   }
 
-      whiteOppenet.emit("gameStart", {
-        roomId,
-        color: 'w',
-        board: games[roomId].playBoard,
-        turn: games[roomId].turn
-      });
-      blackOppenet.emit("gameStart", {
-        roomId,
-        color: 'b',
-        board: games[roomId].playBoard,
-        turn: games[roomId].turn
-      });
+  //     whiteOppenet.emit("gameStart", {
+  //       roomId,
+  //       color: 'w',
+  //       board: games[roomId].playBoard,
+  //       turn: games[roomId].turn
+  //     });
+  //     blackOppenet.emit("gameStart", {
+  //       roomId,
+  //       color: 'b',
+  //       board: games[roomId].playBoard,
+  //       turn: games[roomId].turn
+  //     });
 
-    console.log("Game Created:", roomId);
+  //   console.log("Game Created:", roomId);
 
-    console.log(
-      "White:",
-      whiteOppenet.id,
-      "Black:",
-      blackOppenet.id
-    );
+  //   console.log(
+  //     "White:",
+  //     whiteOppenet.id,
+  //     "Black:",
+  //     blackOppenet.id
+  //   );
 
-    waitingPlayer=null;
+  //   waitingPlayer=null;
 
-  }
+  // }
+
+    console.log("User Connected:", socket.id);
+
+    socket.on("joinGame", ({ playerId }) => {
+
+        console.log("Join Game");
+        console.log("Player ID:", playerId);
+        console.log("Socket ID:", socket.id);
+
+
+        // -----------------------------------------
+        // 1. CHECK IF PLAYER ALREADY HAS A GAME
+        // -----------------------------------------
+
+        let existingRoomId = null;
+        let existingGame = null;
+
+        for (const [roomId, game] of Object.entries(games)) {
+
+            if (
+                game.whitePlayerId === playerId ||
+                game.blackPlayerId === playerId
+            ) {
+                existingRoomId = roomId;
+                existingGame = game;
+                break;
+            }
+        }
+
+
+        // -----------------------------------------
+        // 2. PLAYER IS RECONNECTING
+        // -----------------------------------------
+
+        if (existingGame) {
+
+            console.log("♻️ Reconnecting existing game");
+            console.log("Room:", existingRoomId);
+
+            let color;
+
+            if (existingGame.whitePlayerId === playerId) {
+                color = "w";
+                existingGame.whitePlayer = socket.id;
+            } 
+            else {
+                color = "b";
+                existingGame.blackPlayer = socket.id;
+            }
+
+
+            // Put new socket into old room
+            socket.join(existingRoomId);
+
+            socket.data.playerId = playerId;
+            socket.data.roomId = existingRoomId;
+            socket.data.color = color;
+            socket.data.Castling = true;
+
+
+            // Send OLD game state
+            socket.emit("gameResume", {
+                roomId: existingRoomId,
+                color: color,
+                board: existingGame.playBoard,
+                turn: existingGame.turn,
+                gameOver: existingGame.gameOver || false
+            });
+
+
+            console.log("✅ Game resumed:", existingRoomId);
+
+            return;
+        }
+
+
+        // -----------------------------------------
+        // 3. NEW PLAYER
+        // -----------------------------------------
+
+        socket.data.playerId = playerId;
+
+
+        // -----------------------------------------
+        // 4. WAITING FOR OPPONENT
+        // -----------------------------------------
+
+        if (waitingPlayer === null) {
+
+            waitingPlayer = socket;
+
+            console.log("⏳ Waiting for opponent:", socket.id);
+
+            socket.emit("waiting", {
+                message: "Waiting for opponent..."
+            });
+
+            return;
+        }
+
+
+        // -----------------------------------------
+        // 5. CREATE NEW GAME
+        // -----------------------------------------
+
+        const whitePlayer = waitingPlayer;
+        const blackPlayer = socket;
+
+        const roomId = `room-${roomCounter++}`;
+
+
+        whitePlayer.join(roomId);
+        blackPlayer.join(roomId);
+
+
+        whitePlayer.data.color = "w";
+        blackPlayer.data.color = "b";
+
+        whitePlayer.data.roomId = roomId;
+        blackPlayer.data.roomId = roomId;
+
+        whitePlayer.data.Castling = true;
+        blackPlayer.data.Castling = true;
+
+
+        // -----------------------------------------
+        // 6. SAVE GAME
+        // -----------------------------------------
+
+        games[roomId] = {
+
+            playBoard: createBoard(),
+
+            turn: "w",
+
+            whitePlayer: whitePlayer.id,
+            blackPlayer: blackPlayer.id,
+
+            // IMPORTANT
+            whitePlayerId: whitePlayer.data.playerId,
+            blackPlayerId: blackPlayer.data.playerId,
+
+            gameOver: false
+        };
+
+
+        // -----------------------------------------
+        // 7. SEND GAME START
+        // -----------------------------------------
+
+        whitePlayer.emit("gameStart", {
+            roomId,
+            color: "w",
+            board: games[roomId].playBoard,
+            turn: games[roomId].turn
+        });
+
+
+        blackPlayer.emit("gameStart", {
+            roomId,
+            color: "b",
+            board: games[roomId].playBoard,
+            turn: games[roomId].turn
+        });
+
+
+        console.log("🎮 Game Created:", roomId);
+
+        waitingPlayer = null;
+    });
 
 
   // socket.on("move", ({from,to,board,updatePawn})=>{
@@ -1470,38 +1640,75 @@ io.on("connection", (socket) => {
 
   });
 
-  socket.on("disconnect", () => {
-    console.log("User Disconnected:", socket.id);
+  // socket.on("disconnect", () => {
+  //   console.log("User Disconnected:", socket.id);
 
-    if(waitingPlayer && waitingPlayer.id===socket.id){
-      waitingPlayer=null;
-      console.log("waiting palyer removed");
-      return;
+  //   if(waitingPlayer && waitingPlayer.id===socket.id){
+  //     waitingPlayer=null;
+  //     console.log("⏳ Waiting player removed");
+  //     return;
+  //   }
+
+  //   const roomId = socket.data.roomId;
+
+  //   if(!roomId){
+  //     return;
+  //   }
+
+  //   const game = games[roomId];
+
+  //   if (!game) {
+  //     return;
+  //   } 
+
+  //   console.log("♻️ Player disconnected from game");
+  //   console.log("Room:", roomId);
+  //   console.log("Player ID:", socket.data.playerId);
+
+  //   socket.to(roomId).emit("opponentDisconnected", {
+  //     message: "Opponent disconnected temporarily",
+  //   });
+
+  //   // delete games[roomId];
+
+  //   // console.log(
+  //   //   "Game Deleted:",
+  //   //   roomId
+  //   // );
+
+  // });
+
+  socket.on("disconnect", () => {
+    console.log("❌ User Disconnected:", socket.id);
+
+    if (waitingPlayer && waitingPlayer.id === socket.id) {
+        waitingPlayer = null;
+        console.log("⏳ Waiting player removed");
+        return;
     }
 
     const roomId = socket.data.roomId;
 
-    if(!roomId){
-      return;
+    if (!roomId) {
+        return;
     }
 
     const game = games[roomId];
 
     if (!game) {
-      return;
-    } 
+        return;
+    }
+
+    console.log("♻️ Player disconnected temporarily");
+    console.log("Room:", roomId);
+    console.log("Player ID:", socket.data.playerId);
 
     socket.to(roomId).emit("opponentDisconnected", {
-      message: "Opponent disconnected",
+        message: "Opponent disconnected temporarily"
     });
 
-    delete games[roomId];
-
-    console.log(
-      "Game Deleted:",
-      roomId
-    );
-
+    // ❌ DO NOT DELETE THE GAME
+    // delete games[roomId];
   });
 });
 
