@@ -28,62 +28,55 @@ function Socket_con() {
     const [to,setTo] = useState("");
 
     // const [roomCount, setRoomCount] = useState(0);
+    console.log("Enter in game function");
 
-    console.log("fromLocation:- ",from,",",to);
+    console.log("fromLocation:- ",from,",",to, ":- ", playerColor);
 
-    useEffect(() => { 
-        // let roomCount=0;
-        const handleConnect = () => { 
-            console.log("✅ Connected to server");
+    useEffect(() => {
+
+        const handleConnect = () => {
+            console.log("Connected to server");
             toast("✅ Connected to server successfully.")
             console.log("Socket ID:", socket.id); 
-            console.log("Socket: ", socket); 
+            console.log("Socket: ", socket);
 
             socket.emit("joinGame", {
                 playerId
             });
-        }; 
-        // const handleDisconnect = (reason) => { 
-        //     console.log("❌ Disconnected:", reason); 
-        // }; 
-        const handleGameStart = (data) =>{
-            console.log("🎮 Game Started:", data);
-            console.log("🎨 My Color:", data.color);
+        };
 
-            // localStorage.setItem("roomId", data.roomId);
+        const handleGameStart = (data) => {
+            console.log("Game Started:", data);
+            console.log("My Color:", data.color);
+
             setPlayerColor(data.color);
-            setBoard(data.board);        
-        }
+            setBoard(data.board);
 
-        socket.on("connect", handleConnect); 
-        // socket.on("disconnect", handleDisconnect); // If socket is already connected when component mounts 
+            localStorage.setItem("roomId", data.roomId);
+        };
+
+        const handleGameResume = (data) => {
+            console.log("Game Resumed:", data);
+
+            setPlayerColor(data.color);
+            setBoard(data.board);
+
+            localStorage.setItem("roomId", data.roomId);
+        };
+
+        socket.on("connect", handleConnect);
         socket.on("gameStart", handleGameStart);
-        // socket.on('room_count', (count) => {
-        // console.log(`People in room: ${count}`);
-        // // Update your UI state here (e.g., setRoomCount(count))
-        // });
+        socket.on("gameResume", handleGameResume);
 
-        if (socket.connected) { 
-            console.log("✅ Socket already connected"); 
-            console.log("Socket ID:", socket.id);
+        socket.connect();
 
-            // IMPORTANT
-            socket.emit("playerConnect", {
-                playerId: playerId
-            });
-            // handleConnect();
-            // toast("✅ Socket already connected")
-            // console.log("✅ Socket already connected"); 
-            // console.log("Socket ID:", socket.id); 
-            // console.log("Socket:", socket); 
-        } 
-        
-        return () => { 
-            socket.off("connect", handleConnect); 
-            socket.off("disconnect", handleDisconnect); 
+        return () => {
+            socket.off("connect", handleConnect);
             socket.off("gameStart", handleGameStart);
-        }; 
-    }, [playerId]);
+            socket.off("gameResume", handleGameResume);
+        };
+
+    }, []);
 
     console.log("fromLocation:- ",from,",",to);
 
@@ -131,11 +124,13 @@ function Socket_con() {
             return;
         }
 
+        console.log(`handleClickPlace:- ${col}, ${row}, ${from}, ${to} :- ${playerColor}`)
+
         const file = String.fromCharCode(97 + col); 
         const rank = 8 - row;
         const position = `${file}${rank}`;
         const clickedPiece = board[row][col];
-        console.log( "Clicked:", position, "Piece:", clickedPiece );
+        console.log( `Clicked: ${position}| Piece: ${clickedPiece}` );
 
         // if(!from){
         //     if(!clickedPiece){
@@ -222,7 +217,7 @@ function Socket_con() {
                 // }
                 // setFrom("");
                 // setTo("");
-                console.log("✅ Updating board ");
+                console.log("✅ Updating board ", data);
                 setBoard(data.board);
 
                 if(data.gameOver){
@@ -233,6 +228,7 @@ function Socket_con() {
             
                 setFrom("");
                 setTo("");
+                setPlayerColor(data.turn);
                 // setUpdatePawn(null);
             } else {
                 console.log("❌ Move rejected:", data.message);
