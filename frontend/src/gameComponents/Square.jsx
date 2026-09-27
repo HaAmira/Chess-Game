@@ -3,12 +3,7 @@
 // import { useState } from "react";
 import Piece from "./Piece"
 
-const Square = ({clickPlace,isDark,piece}) => {
-  // const handlerClick=()=>{
-
-  //   // const from = columId+rowId;
-  //   console.log("Click on Square: ", columId+rowId);
-  // }
+const Square = ({clickPlace,isDark,piece,isSelected}) => {
   let pieces=null;
   if(piece!==null && (piece.length===3 || piece.length===2)){
     pieces=piece.slice(0,2);
@@ -16,14 +11,17 @@ const Square = ({clickPlace,isDark,piece}) => {
 
   return (
     <div
-        className={`relative aspect-square w-full flex items-center justify-center select-none cursor-pointer ${isDark?"bg-gray-600": "bg-amber-500"} hover:brightness-110 transition-all duration-100`}
+        className={`relative aspect-square w-full flex items-center justify-center select-none cursor-pointer transition-all duration-100 ${
+          isDark ? "bg-gray-600" : "bg-amber-500"
+        } ${isSelected ? "ring-4 ring-yellow-400 z-10 brightness-110" : "hover:brightness-110"}`}
         onClick={clickPlace}
     >
         <Piece piece={pieces}/>
         {
-          piece!==null && piece[piece.length-1]==='m' && <div className="absolute z-20 w-[22%] aspect-square rounded-full bg-green-500/70 pointer-events-none"></div>
+          piece!==null && piece[piece.length-1]==='m' && (
+            <div className="absolute z-20 w-[24%] aspect-square rounded-full bg-green-500/80 shadow-md ring-2 ring-white/50 pointer-events-none"></div>
+          )
         }
-        {/* <div className="bg-green-600/50 absolute z-2 w-1/4 h-1/4 rounded-2xl "></div> */}
     </div>
   )
 }
