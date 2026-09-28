@@ -4,12 +4,12 @@ import wq from "../assets/WhitePiece/wQ.png";
 import wb from "../assets/WhitePiece/wB.png";
 import wr from "../assets/WhitePiece/wR.png";
 import wp from "../assets/WhitePiece/wP.png";
-import bk from "../assets/BlackPiece/bk.png";
-import bkn from "../assets/BlackPiece/bkn.png";
-import bq from "../assets/BlackPiece/bq.png";
-import bb from "../assets/BlackPiece/bb.png";
-import br from "../assets/BlackPiece/br.png";
-import bp from "../assets/BlackPiece/bp.png";
+import bk from "../assets/BlackPiece/bK.png";
+import bkn from "../assets/BlackPiece/bKn.png";
+import bq from "../assets/BlackPiece/bQ.png";
+import bb from "../assets/BlackPiece/bB.png";
+import br from "../assets/BlackPiece/bR.png";
+import bp from "../assets/BlackPiece/bP.png";
 
 const pieces = {
   wr: wr,
