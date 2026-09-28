@@ -48,7 +48,7 @@ const PawnPromotion = ({ openComponent,onClose,piecePromotionData }) => {
             <div className='w-3xs h-20 bg-black text-center flex justify-center items-center'>
                 <ButtonGroup variant="outlined" aria-label="Basic button group">
                     <Button onClick={()=>piecePromotion("r")}>♖</Button>
-                    <Button onClick={()=>piecePromotion("k")}>♘</Button>
+                    <Button onClick={()=>piecePromotion("n")}>♘</Button>
                     <Button onClick={()=>piecePromotion("b")}>♗</Button>
                     <Button onClick={()=>piecePromotion("q")}>♕</Button>
                 </ButtonGroup>

@@ -1,15 +1,24 @@
 // socket.js
 import { io } from "socket.io-client";
 
-let playerId = localStorage.getItem("playerId");
+const getSessionPlayerId = () => {
+  let id = sessionStorage.getItem("playerId");
+  if (!id) {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      id = crypto.randomUUID();
+    } else {
+      id = "p-" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+    }
+    sessionStorage.setItem("playerId", id);
+  }
+  return id;
+};
 
-if (!playerId) {
-  playerId = crypto.randomUUID();
-  localStorage.setItem("playerId", playerId);
-}
+export const playerId = getSessionPlayerId();
 
-export { playerId };
-
-export const socket = io("http://localhost:3000",{
+export const socket = io("http://localhost:3000", {
   autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: 20,
+  reconnectionDelay: 1000,
 });
